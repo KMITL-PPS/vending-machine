@@ -24,14 +24,14 @@ typedef struct good
     pthread_mutex_t mutex;
 } good_t;
 
-typedef struct people
+typedef struct person
 {
     good_t *good;
     int interval;
     int repeat;
     char role;                  // 'S' = supplier , 'C' = consumer
     pthread_t thread;
-} people_t;
+} person_t;
 
 char *cctime();
 good_t *get_good_or_create(char *);
@@ -45,8 +45,8 @@ time_t now;
 char s_time[50];
 
 good_t goods[MAX_GOOD];
-people_t suppliers[SUPPLIER_AMOUNT];
-people_t consumers[CONSUMER_AMOUNT];
+person_t suppliers[SUPPLIER_AMOUNT];
+person_t consumers[CONSUMER_AMOUNT];
 
 int good_count = 0;
 
@@ -79,7 +79,7 @@ int main()
         fscanf(fp, "%d\n%d", &suppliers[i].interval, &suppliers[i].repeat);
         suppliers[i].role = 'S';
     }
-// TODO: merge both as people?
+
     // collect consumer config file
     for (i = 0; i < CONSUMER_AMOUNT; i++)
     {
@@ -107,7 +107,7 @@ int main()
 
     // print_time();
     // printf("STARTING...\nSupplier amount: %d\nConsumer amount: %d\nGood(s):", SUPPLIER_AMOUNT, CONSUMER_AMOUNT);
-    printf("[%s] STARTING...\nSupplier amount: %d\nConsumer amount: %d\nGood(s):", cctime(), SUPPLIER_AMOUNT, CONSUMER_AMOUNT);
+    printf("%s STARTING...\nSupplier amount: %d\nConsumer amount: %d\nGood(s):", cctime(), SUPPLIER_AMOUNT, CONSUMER_AMOUNT);
     for (i = 0; i < good_count; i++)
     {
         printf(" %s", goods[i].name);
@@ -179,7 +179,7 @@ good_t *get_good_or_create(char *name)
 void *entry(void *arg)
 {
     // int s_id = (int) arg;
-    people_t *person = (people_t *) arg;
+    person_t *person = (person_t *) arg;
     good_t *good = person->good;
 
     // attempt count
@@ -199,7 +199,7 @@ void *entry(void *arg)
 
                 // print_time();
                 // printf("%s %s 1 unit. stock after = %d\n", good->name, (person->role == 'S' ? "supplied" : "consumed"), good->amount);
-                printf("[%s] %s %s 1 unit. stock after = %d\n", cctime(), good->name, (person->role == 'S' ? "supplied" : "consumed"), good->amount);
+                printf("%s %s %s 1 unit. stock after = %d\n", cctime(), good->name, (person->role == 'S' ? "supplied" : "consumed"), good->amount);
 
                 // reset time to wait and attempt count
                 time_to_wait = person->interval;
@@ -209,7 +209,7 @@ void *entry(void *arg)
             {
                 // print_time();
                 // printf("%s %s going to wait.\n", good->name, (person->role == 'S' ? "supplier" : "consumer"));
-                printf("[%s] %s %s going to wait.\n", cctime(), good->name, (person->role == 'S' ? "supplier" : "consumer"));
+                printf("%s %s %s going to wait.\n", cctime(), good->name, (person->role == 'S' ? "supplier" : "consumer"));
             }
 
             // unlock thread
