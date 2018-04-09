@@ -9,7 +9,7 @@
 #define MAX_GOOD 5
 
 // supplier amount
-#define SUPPLIER_AMOUNT 1
+#define SUPPLIER_AMOUNT 2
 
 // consumer amount
 #define CONSUMER_AMOUNT 8
@@ -74,10 +74,8 @@ int main()
         suppliers[i].good = good;
 
         // add other information to supplier
-        fscanf(fp, "%d\n%d", suppliers[i].interval, suppliers[i].repeat);
+        fscanf(fp, "%d\n%d", &suppliers[i].interval, &suppliers[i].repeat);
     }
-
-    printf("%s %d %d", suppliers[0].good->name, suppliers[0].interval, suppliers[0].repeat);
 
     return 0;
 }
