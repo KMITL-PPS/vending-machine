@@ -15,7 +15,7 @@
 #define SUPPLIER_AMOUNT 2
 
 // consumer amount
-#define CONSUMER_AMOUNT 1
+#define CONSUMER_AMOUNT 2
 
 typedef struct good
 {
@@ -29,14 +29,13 @@ typedef struct people
     good_t *good;
     int interval;
     int repeat;
-    // char role;                  // 'S' = supplier , 'C' = consumer
+    char role;                  // 'S' = supplier , 'C' = consumer
     pthread_t thread;
 } people_t;
 
 char *cctime();
 good_t *get_good_or_create(char *);
-void *supply(void *);
-void *consume(void *);
+void *entry(void *);
 
 // pthread_t thread_s[SUPPLIER_AMOUNT];
 // pthread_t thread_c[CONSUMER_AMOUNT];
@@ -78,6 +77,7 @@ int main()
 
         // add other information to supplier
         fscanf(fp, "%d\n%d", &suppliers[i].interval, &suppliers[i].repeat);
+        suppliers[i].role = 'S';
     }
 // TODO: merge both as people?
     // collect consumer config file
@@ -102,6 +102,7 @@ int main()
 
         // add other information to consumer
         fscanf(fp, "%d\n%d", &consumers[i].interval, &consumers[i].repeat);
+        consumers[i].role = 'C';
     }
 
     // print_time();
@@ -115,7 +116,7 @@ int main()
 
     for (i = 0; i < SUPPLIER_AMOUNT; i++)
     {
-        if (pthread_create(&suppliers[i].thread, NULL, &supply, (void *) i) != 0)
+        if (pthread_create(&suppliers[i].thread, NULL, &entry, (void *) &suppliers[i]) != 0)
         {
             printf("Error creating supplier thread %d!\n", i);
         }
@@ -123,7 +124,7 @@ int main()
 
     for (i = 0; i < CONSUMER_AMOUNT; i++)
     {
-        if (pthread_create(&consumers[i].thread, NULL, &consume, (void *) i) != 0)
+        if (pthread_create(&consumers[i].thread, NULL, &entry, (void *) &consumers[i]) != 0)
         {
             printf("Error creating consumer thread %d!\n", i);
         }
@@ -175,40 +176,40 @@ good_t *get_good_or_create(char *name)
     return &goods[good_count - 1];
 }
 
-void *supply(void *arg)
+void *entry(void *arg)
 {
     // int s_id = (int) arg;
-    people_t *supplier = &suppliers[(int) arg];
-    good_t *good = supplier->good;
+    people_t *person = (people_t *) arg;
+    good_t *good = person->good;
 
     // attempt count
     int i;
     // time to wait (default is interval)
-    int time_to_wait = supplier->interval;
+    int time_to_wait = person->interval;
     for (i = 1; ; i++)
     {
         // try to lock thread
         if (pthread_mutex_trylock(&good->mutex) == 0)
         {
             // check if amount is ok
-            if (good->amount < MAX_AMOUNT)
+            if ((person->role == 'S' && good->amount < MAX_AMOUNT) || (person->role == 'C' && good->amount > 0))
             {
-                // increase amount of good
-                good->amount++;
+                // increase/decrease amount of good
+                good->amount += (person->role == 'S' ? 1 : -1);
 
                 // print_time();
-                // printf("%s supplied 1 unit. stock after = %d\n", good->name, good->amount);
-                printf("[%s] %s supplied 1 unit. stock after = %d\n", cctime(), good->name, good->amount);
+                // printf("%s %s 1 unit. stock after = %d\n", good->name, (person->role == 'S' ? "supplied" : "consumed"), good->amount);
+                printf("[%s] %s %s 1 unit. stock after = %d\n", cctime(), good->name, (person->role == 'S' ? "supplied" : "consumed"), good->amount);
 
                 // reset time to wait and attempt count
-                time_to_wait = supplier->interval;
+                time_to_wait = person->interval;
                 i = 0;
             }
             else
             {
                 // print_time();
-                // printf("%s supplier going to wait.\n", good->name);
-                printf("[%s] %s supplier going to wait.\n", cctime(), good->name);
+                // printf("%s %s going to wait.\n", good->name, (person->role == 'S' ? "supplier" : "consumer"));
+                printf("[%s] %s %s going to wait.\n", cctime(), good->name, (person->role == 'S' ? "supplier" : "consumer"));
             }
 
             // unlock thread
@@ -217,64 +218,7 @@ void *supply(void *arg)
         sleep(time_to_wait);
 
         // if attempt = repeat
-        if (i == supplier->repeat)
-        {
-            // reset attempt count
-            i = 0;
-            // multiple time to wait by 2
-            time_to_wait *= 2;
-            // check if its exceed 60 sec
-            if (time_to_wait >= 60)
-                time_to_wait = 60;
-        }
-    }
-
-    return NULL;
-}
-
-void *consume(void *arg)
-{
-    // int s_id = (int) arg;
-    people_t *consumer = &consumers[(int) arg];
-    good_t *good = consumer->good;
-
-    // attempt count
-    int i;
-    // time to wait (default is interval)
-    int time_to_wait = consumer->interval;
-    for (i = 1; ; i++)
-    {
-        // try to lock thread
-        if (pthread_mutex_trylock(&good->mutex) == 0)
-        {
-            // check if amount is ok
-            if (good->amount > 0)
-            {
-                // decrease amount of good
-                good->amount--;
-
-                // print_time();
-                // printf("%s consumed 1 unit. stock after = %d\n", good->name, good->amount);
-                printf("[%s] %s consumed 1 unit. stock after = %d\n", cctime(), good->name, good->amount);
-
-                // reset time to wait and attempt count
-                time_to_wait = consumer->interval;
-                i = 0;
-            }
-            else
-            {
-                // print_time();
-                // printf("%s consumer going to wait.\n", good->name);
-                printf("[%s] %s consumer going to wait.\n", cctime(), good->name);
-            }
-
-            // unlock thread
-            pthread_mutex_unlock(&good->mutex);
-        }
-        sleep(time_to_wait);
-
-        // if attempt = repeat
-        if (i == consumer->repeat)
+        if (i == person->repeat)
         {
             // reset attempt count
             i = 0;
