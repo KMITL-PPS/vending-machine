@@ -24,47 +24,36 @@ typedef struct good
     pthread_mutex_t mutex;
 } good_t;
 
-typedef struct person
-{
-    good_t *good;
-    int interval;
-    int repeat;
-    // char role;                  // 'S' = supplier , 'C' = consumer
-    // pthread_t thread;
-} person_t;
-
 typedef struct arg
 {
     int id;
     char role;                  // 'S' = supplier , 'C' = consumer
 } arg_t;
 
+// function prototype
 char *cctime();
 good_t *get_good_or_create(char *);
 void *entry(void *);
 
-// pthread_t thread_s[SUPPLIER_AMOUNT];
-// pthread_t thread_c[CONSUMER_AMOUNT];
-// pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+// pthread variable
 pthread_t threads[SUPPLIER_AMOUNT + CONSUMER_AMOUNT];
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
+// time variable
 time_t now;
 char s_time[50];
 
+// goods
 good_t goods[MAX_GOOD];
-// person_t suppliers[SUPPLIER_AMOUNT];
-// person_t consumers[CONSUMER_AMOUNT];
-
 int good_count = 0;
 
 int main()
 {
     int i, j;
 
-    // printf("%s STARTING...\nSupplier amount: %d\nConsumer amount: %d\nGood(s):", cctime(), SUPPLIER_AMOUNT, CONSUMER_AMOUNT);
     printf("%s STARTING...\nSupplier amount: %d\nConsumer amount: %d\n-------------------------------------------\n\n", cctime(), SUPPLIER_AMOUNT, CONSUMER_AMOUNT);
 
+    // create supplier thread
     for (i = 0; i < SUPPLIER_AMOUNT; i++)
     {
         arg_t *arg = malloc(sizeof(arg_t *));
@@ -76,6 +65,7 @@ int main()
         }
     }
 
+    // create consumer thread
     for (j = 0; j < CONSUMER_AMOUNT; i++, j++)
     {
         arg_t *arg = malloc(sizeof(arg_t *));
@@ -93,6 +83,7 @@ int main()
     return 0;
 }
 
+// get time and return as string
 char *cctime()
 {
     time(&now);
@@ -101,6 +92,7 @@ char *cctime()
     return s_time;
 }
 
+// get good or create if not exist
 good_t *get_good_or_create(char *name)
 {
     int i;
@@ -119,7 +111,6 @@ good_t *get_good_or_create(char *name)
     if (good_count >= MAX_GOOD)
     {
         fprintf(stderr, "Good amount exceed maximum number of good!");
-        // return NULL;
         exit(1);
     }
 
@@ -137,7 +128,8 @@ good_t *get_good_or_create(char *name)
 void *entry(void *arg)
 {
     char tmp_file[15], tmp_name[257];
-    person_t person;
+    good_t *good;
+    int interval, repeat;
 
     // get id & person role
     arg_t *arg_r = arg;
@@ -160,45 +152,45 @@ void *entry(void *arg)
 
     // add good to consumer
     pthread_mutex_lock(&mutex);
-    person.good = get_good_or_create(tmp_name);
+    good = get_good_or_create(tmp_name);
     pthread_mutex_unlock(&mutex);
 
     // add other information to consumer
-    fscanf(fp, "%d\n%d", &person.interval, &person.repeat);
+    fscanf(fp, "%d\n%d", &interval, &repeat);
 
     // attempt count
     int i;
     // time to wait (default is interval)
-    int time_to_wait = person.interval;
+    int time_to_wait = interval;
     for (i = 1; ; i++)
     {
         // try to lock thread
-        if (pthread_mutex_trylock(&person.good->mutex) == 0)
+        if (pthread_mutex_trylock(&good->mutex) == 0)
         {
             // check if amount is ok
-            if ((role == 'S' && person.good->amount < MAX_AMOUNT) || (role == 'C' && person.good->amount > 0))
+            if ((role == 'S' && good->amount < MAX_AMOUNT) || (role == 'C' && good->amount > 0))
             {
                 // increase/decrease amount of good
-                person.good->amount += (role == 'S' ? 1 : -1);
+                good->amount += (role == 'S' ? 1 : -1);
 
-                printf("%s %s %s 1 unit. stock after = %d\n", cctime(), person.good->name, (role == 'S' ? "supplied" : "consumed"), person.good->amount);
+                printf("%s %s %s 1 unit. stock after = %d\n", cctime(), good->name, (role == 'S' ? "supplied" : "consumed"), good->amount);
 
                 // reset time to wait and attempt count
-                time_to_wait = person.interval;
+                time_to_wait = interval;
                 i = 0;
             }
             else
             {
-                printf("%s %s %s going to wait.\n", cctime(), person.good->name, (role == 'S' ? "supplier" : "consumer"));
+                printf("%s %s %s going to wait.\n", cctime(), good->name, (role == 'S' ? "supplier" : "consumer"));
             }
 
             // unlock thread
-            pthread_mutex_unlock(&person.good->mutex);
+            pthread_mutex_unlock(&good->mutex);
         }
         sleep(time_to_wait);
 
         // if attempt = repeat
-        if (i == person.repeat)
+        if (i == repeat)
         {
             // reset attempt count
             i = 0;
