@@ -33,7 +33,7 @@ typedef struct people
     pthread_t thread;
 } people_t;
 
-void print_time();
+char *cctime();
 good_t *get_good_or_create(char *);
 void *supply(void *);
 void *consume(void *);
@@ -104,8 +104,9 @@ int main()
         fscanf(fp, "%d\n%d", &consumers[i].interval, &consumers[i].repeat);
     }
 
-    print_time();
-    printf("STARTING...\nSupplier amount: %d\nConsumer amount: %d\nGood(s):", SUPPLIER_AMOUNT, CONSUMER_AMOUNT);
+    // print_time();
+    // printf("STARTING...\nSupplier amount: %d\nConsumer amount: %d\nGood(s):", SUPPLIER_AMOUNT, CONSUMER_AMOUNT);
+    printf("[%s] STARTING...\nSupplier amount: %d\nConsumer amount: %d\nGood(s):", cctime(), SUPPLIER_AMOUNT, CONSUMER_AMOUNT);
     for (i = 0; i < good_count; i++)
     {
         printf(" %s", goods[i].name);
@@ -120,13 +121,13 @@ int main()
         }
     }
 
-    // for (i = 0; i < CONSUMER_AMOUNT; i++)
-    // {
-    //     if (pthread_create(&consumers[i].thread, NULL, &consume, (void *) i) != 0)
-    //     {
-    //         printf("Error creating consumer thread %d!\n", i);
-    //     }
-    // }
+    for (i = 0; i < CONSUMER_AMOUNT; i++)
+    {
+        if (pthread_create(&consumers[i].thread, NULL, &consume, (void *) i) != 0)
+        {
+            printf("Error creating consumer thread %d!\n", i);
+        }
+    }
 
     // infinite loop
     while (1);
@@ -134,12 +135,12 @@ int main()
     return 0;
 }
 
-void print_time()
+char *cctime()
 {
     time(&now);
     struct tm *p = localtime(&now);
     strftime(s_time, 50, "%c", p);
-    printf("[%s] ", s_time);
+    return s_time;
 }
 
 good_t *get_good_or_create(char *name)
@@ -189,14 +190,15 @@ void *supply(void *arg)
         // try to lock thread
         if (pthread_mutex_trylock(&good->mutex) == 0)
         {
-            printf("testt");
+            // check if amount is ok
             if (good->amount < MAX_AMOUNT)
             {
                 // increase amount of good
                 good->amount++;
 
-                print_time();
-                printf("%s supplied 1 unit. stock after = %d\n", good->name, good->amount);
+                // print_time();
+                // printf("%s supplied 1 unit. stock after = %d\n", good->name, good->amount);
+                printf("[%s] %s supplied 1 unit. stock after = %d\n", cctime(), good->name, good->amount);
 
                 // reset time to wait and attempt count
                 time_to_wait = supplier->interval;
@@ -204,8 +206,9 @@ void *supply(void *arg)
             }
             else
             {
-                print_time();
-                printf("%s supplier going to wait.\n", good->name);
+                // print_time();
+                // printf("%s supplier going to wait.\n", good->name);
+                printf("[%s] %s supplier going to wait.\n", cctime(), good->name);
             }
 
             // unlock thread
@@ -231,11 +234,56 @@ void *supply(void *arg)
 
 void *consume(void *arg)
 {
-    int id = (int) arg;
+    // int s_id = (int) arg;
+    people_t *consumer = &consumers[(int) arg];
+    good_t *good = consumer->good;
 
-    while (1)
+    // attempt count
+    int i;
+    // time to wait (default is interval)
+    int time_to_wait = consumer->interval;
+    for (i = 1; ; i++)
     {
-        // 
+        // try to lock thread
+        if (pthread_mutex_trylock(&good->mutex) == 0)
+        {
+            // check if amount is ok
+            if (good->amount > 0)
+            {
+                // decrease amount of good
+                good->amount--;
+
+                // print_time();
+                // printf("%s consumed 1 unit. stock after = %d\n", good->name, good->amount);
+                printf("[%s] %s consumed 1 unit. stock after = %d\n", cctime(), good->name, good->amount);
+
+                // reset time to wait and attempt count
+                time_to_wait = consumer->interval;
+                i = 0;
+            }
+            else
+            {
+                // print_time();
+                // printf("%s consumer going to wait.\n", good->name);
+                printf("[%s] %s consumer going to wait.\n", cctime(), good->name);
+            }
+
+            // unlock thread
+            pthread_mutex_unlock(&good->mutex);
+        }
+        sleep(time_to_wait);
+
+        // if attempt = repeat
+        if (i == consumer->repeat)
+        {
+            // reset attempt count
+            i = 0;
+            // multiple time to wait by 2
+            time_to_wait *= 2;
+            // check if its exceed 60 sec
+            if (time_to_wait >= 60)
+                time_to_wait = 60;
+        }
     }
 
     return NULL;
