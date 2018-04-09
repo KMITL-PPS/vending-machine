@@ -33,12 +33,16 @@ typedef struct people
     pthread_t thread;
 } people_t;
 
-good_t *getGoodFromName(char *);
+void print_time();
+good_t *get_good_or_create(char *);
 void *entry(void *);
 
 // pthread_t thread_s[SUPPLIER_AMOUNT];
 // pthread_t thread_c[CONSUMER_AMOUNT];
 // pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+time_t now;
+char s_time[50];
 
 good_t goods[MAX_GOOD];
 people_t suppliers[SUPPLIER_AMOUNT];
@@ -69,7 +73,7 @@ int main()
         fscanf(fp, "%[^\n]", tmp_name);
 
         // add good to supplier
-        suppliers[i].good = getGoodOrCreate(tmp_name);
+        suppliers[i].good = get_good_or_create(tmp_name);
 
         // add other information to supplier
         fscanf(fp, "%d\n%d", &suppliers[i].interval, &suppliers[i].repeat);
@@ -93,12 +97,13 @@ int main()
         fscanf(fp, "%[^\n]", tmp_name);
 
         // add good to consumer
-        consumers[i].good = getGoodOrCreate(tmp_name);
+        consumers[i].good = get_good_or_create(tmp_name);
 
         // add other information to consumer
         fscanf(fp, "%d\n%d", &consumers[i].interval, &consumers[i].repeat);
     }
 
+    print_time();
     printf("STARTING...\nSupplier amount: %d\nConsumer amount: %d\nGood(s):", SUPPLIER_AMOUNT, CONSUMER_AMOUNT);
     for (i = 0; i < good_count; i++)
     {
@@ -106,13 +111,13 @@ int main()
     }
     printf("\n-------------------------------------------\n\n");
 
-    for (i = 0; i < SUPPLIER_AMOUNT; i++)
-    {
-        if (pthread_create(&suppliers[i].thread, NULL, &supply, (void *) &suppliers[i]) != 0)
-        {
-            printf("Error creating supplier thread %d!\n", i);
-        }
-    }
+    // for (i = 0; i < SUPPLIER_AMOUNT; i++)
+    // {
+    //     if (pthread_create(&suppliers[i].thread, NULL, &supply, (void *) &suppliers[i]) != 0)
+    //     {
+    //         printf("Error creating supplier thread %d!\n", i);
+    //     }
+    // }
 
     // for (i = 0; i < CONSUMER_AMOUNT; i++)
     // {
@@ -125,7 +130,15 @@ int main()
     return 0;
 }
 
-good_t *getGoodOrCreate(char *name)
+void print_time()
+{
+    time(&now);
+    struct tm *p = localtime(&now);
+    strftime(s_time, 50, "%c", p);
+    printf("[%s] ", s_time);
+}
+
+good_t *get_good_or_create(char *name)
 {
     int i;
     // check if good is exist then return
