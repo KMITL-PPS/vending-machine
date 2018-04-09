@@ -29,7 +29,7 @@ typedef struct people
     good_t *good;
     int interval;
     int repeat;
-    char role;                  // 'S' = supplier , 'C' = consumer
+    // char role;                  // 'S' = supplier , 'C' = consumer
     pthread_t thread;
 } people_t;
 
@@ -171,11 +171,53 @@ good_t *get_good_or_create(char *name)
 
 void *supply(void *arg)
 {
-    int id = (int) arg;
+    // int s_id = (int) arg;
+    people_t *supplier = &suppliers[(int) arg];
+    good_t *good = supplier->good;
 
-    while (1)
+    // attempt count
+    int i;
+    // time to wait (default is interval)
+    int time_to_wait = supplier->interval;
+    for (i = 1; ; i++)
     {
-        // 
+        // try to lock thread
+        if (pthread_mutex_trylock(&good->mutex))
+        {
+            if (good->amount < 100)
+            {
+                // increase amount of good
+                good->amount++;
+
+                print_time();
+                printf("%s supplied 1 unit. stock after = %d\n", good->name, good->amount);
+
+                // reset time to wait and attempt count
+                time_to_wait = supplier->interval;
+                i = 0;
+            }
+            else
+            {
+                print_time();
+                printf("%s supplier going to wait.\n", good->name);
+            }
+
+            // unlock thread
+            pthread_mutex_unlock(&good->mutex);
+        }
+        sleep(time_to_wait);
+
+        // if attempt = repeat
+        if (i == supplier->repeat)
+        {
+            // reset attempt count
+            i = 0;
+            // multiple time to wait by 2
+            time_to_wait *= 2;
+            // check if its exceed 60 sec
+            if (time_to_wait >= 60)
+                time_to_wait = 60;
+        }
     }
 
     return NULL;
