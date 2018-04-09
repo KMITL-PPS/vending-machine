@@ -147,15 +147,15 @@ void *entry(void *arg)
         exit(1);
     }
 
-    // scan good name
+    // read good name
     fscanf(fp, "%[^\n]", tmp_name);
 
-    // add good to consumer
+    // get good
     pthread_mutex_lock(&mutex);
     good = get_good_or_create(tmp_name);
     pthread_mutex_unlock(&mutex);
 
-    // add other information to consumer
+    // read other information
     fscanf(fp, "%d\n%d", &interval, &repeat);
 
     // attempt count
