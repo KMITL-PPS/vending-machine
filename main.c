@@ -21,6 +21,7 @@ typedef struct good
 {
     char name[257];
     int amount;
+    pthread_mutex_t mutex;
 } good_t;
 
 typedef struct people
@@ -29,14 +30,15 @@ typedef struct people
     int interval;
     int repeat;
     char role;                  // 'S' = supplier , 'C' = consumer
+    pthread_t thread;
 } people_t;
 
 good_t *getGoodFromName(char *);
 void *entry(void *);
 
-pthread_t thread_s[SUPPLIER_AMOUNT];
-pthread_t thread_c[CONSUMER_AMOUNT];
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+// pthread_t thread_s[SUPPLIER_AMOUNT];
+// pthread_t thread_c[CONSUMER_AMOUNT];
+// pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 good_t goods[MAX_GOOD];
 people_t suppliers[SUPPLIER_AMOUNT];
@@ -66,29 +68,8 @@ int main()
         // scan good name
         fscanf(fp, "%[^\n]", tmp_name);
 
-        // get good
-        good_t *good = getGoodFromName(tmp_name);
-        // if not exist then insert it
-        if (good == 0)
-        {
-            // check if good amount exceed MAX_GOOD
-            if (good_count >= MAX_GOOD)
-            {
-                fprintf(stderr, "Good amount exceed maximum number of good!");
-                return 1;
-            }
-
-            // add information
-            strcpy(goods[good_count].name, tmp_name);
-            goods[good_count].amount = 0;
-
-            // get good
-            good = &goods[good_count];
-            good_count++;
-        }
-
         // add good to supplier
-        suppliers[i].good = good;
+        suppliers[i].good = getGoodOrCreate(tmp_name);
 
         // add other information to supplier
         fscanf(fp, "%d\n%d", &suppliers[i].interval, &suppliers[i].repeat);
@@ -111,29 +92,8 @@ int main()
         // scan good name
         fscanf(fp, "%[^\n]", tmp_name);
 
-        // get good
-        good_t *good = getGoodFromName(tmp_name);
-        // if not exist then insert it
-        if (good == 0)
-        {
-            // check if good amount exceed MAX_GOOD
-            if (good_count >= MAX_GOOD)
-            {
-                fprintf(stderr, "Good amount exceed maximum number of good!");
-                return 1;
-            }
-
-            // add information
-            strcpy(goods[good_count].name, tmp_name);
-            goods[good_count].amount = 0;
-
-            // get good
-            good = &goods[good_count];
-            good_count++;
-        }
-
         // add good to consumer
-        consumers[i].good = good;
+        consumers[i].good = getGoodOrCreate(tmp_name);
 
         // add other information to consumer
         fscanf(fp, "%d\n%d", &consumers[i].interval, &consumers[i].repeat);
@@ -148,7 +108,7 @@ int main()
 
     for (i = 0; i < SUPPLIER_AMOUNT; i++)
     {
-        if (pthread_create(&thread_s[i], NULL, &supply, (void *) &suppliers[i]) != 0)
+        if (pthread_create(&suppliers[i].thread, NULL, &supply, (void *) &suppliers[i]) != 0)
         {
             printf("Error creating supplier thread %d!\n", i);
         }
@@ -156,7 +116,7 @@ int main()
 
     // for (i = 0; i < CONSUMER_AMOUNT; i++)
     // {
-    //     if (pthread_create(&thread_c[i], NULL, &consume, (void *) &consumers[i]) != 0)
+    //     if (pthread_create(&consumers[i].thread, NULL, &consume, (void *) &consumers[i]) != 0)
     //     {
     //         printf("Error creating consumer thread %d!\n", i);
     //     }
@@ -165,9 +125,10 @@ int main()
     return 0;
 }
 
-good_t *getGoodFromName(char *name)
+good_t *getGoodOrCreate(char *name)
 {
     int i;
+    // check if good is exist then return
     for (i = 0; i < good_count; i++)
     {
         if (!strcmp(goods[i].name, name))
@@ -175,7 +136,24 @@ good_t *getGoodFromName(char *name)
             return &goods[i];
         }
     }
-    return 0;
+
+    // good is not exist
+    // check if good amount exceed MAX_GOOD
+    if (good_count >= MAX_GOOD)
+    {
+        fprintf(stderr, "Good amount exceed maximum number of good!");
+        return 1;
+    }
+
+    // add information
+    strcpy(goods[good_count].name, name);
+    goods[good_count].amount = 0;
+    pthread_mutex_init(&goods[good_count].mutex, NULL);
+
+    // increase good count
+    good_count++;
+
+    return &goods[good_count - 1];
 }
 
 void *supply(void *arg)
