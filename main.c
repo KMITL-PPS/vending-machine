@@ -35,7 +35,8 @@ typedef struct people
 
 void print_time();
 good_t *get_good_or_create(char *);
-void *entry(void *);
+void *supply(void *);
+void *consume(void *);
 
 // pthread_t thread_s[SUPPLIER_AMOUNT];
 // pthread_t thread_c[CONSUMER_AMOUNT];
@@ -111,21 +112,24 @@ int main()
     }
     printf("\n-------------------------------------------\n\n");
 
-    // for (i = 0; i < SUPPLIER_AMOUNT; i++)
-    // {
-    //     if (pthread_create(&suppliers[i].thread, NULL, &supply, (void *) &suppliers[i]) != 0)
-    //     {
-    //         printf("Error creating supplier thread %d!\n", i);
-    //     }
-    // }
+    for (i = 0; i < SUPPLIER_AMOUNT; i++)
+    {
+        if (pthread_create(&suppliers[i].thread, NULL, &supply, (void *) i) != 0)
+        {
+            printf("Error creating supplier thread %d!\n", i);
+        }
+    }
 
     // for (i = 0; i < CONSUMER_AMOUNT; i++)
     // {
-    //     if (pthread_create(&consumers[i].thread, NULL, &consume, (void *) &consumers[i]) != 0)
+    //     if (pthread_create(&consumers[i].thread, NULL, &consume, (void *) i) != 0)
     //     {
     //         printf("Error creating consumer thread %d!\n", i);
     //     }
     // }
+
+    // infinite loop
+    while (1);
 
     return 0;
 }
@@ -155,7 +159,8 @@ good_t *get_good_or_create(char *name)
     if (good_count >= MAX_GOOD)
     {
         fprintf(stderr, "Good amount exceed maximum number of good!");
-        return 1;
+        // return NULL;
+        exit(1);
     }
 
     // add information
@@ -182,9 +187,10 @@ void *supply(void *arg)
     for (i = 1; ; i++)
     {
         // try to lock thread
-        if (pthread_mutex_trylock(&good->mutex))
+        if (pthread_mutex_trylock(&good->mutex) == 0)
         {
-            if (good->amount < 100)
+            printf("testt");
+            if (good->amount < MAX_AMOUNT)
             {
                 // increase amount of good
                 good->amount++;
