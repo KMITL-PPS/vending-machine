@@ -171,44 +171,43 @@ void *entry(void *arg)
     int time_to_wait = interval;
     for (i = 1; ; i++)
     {
-        // try to lock thread
-        if (pthread_mutex_trylock(&good->mutex) == 0)
+        // lock thread
+        pthread_mutex_lock(&good->mutex);
+        
+        // check if amount is ok
+        if ((role == 'S' && good->amount < MAX_AMOUNT) || (role == 'C' && good->amount > 0))
         {
-            // check if amount is ok
-            if ((role == 'S' && good->amount < MAX_AMOUNT) || (role == 'C' && good->amount > 0))
-            {
-                // increase/decrease amount of good
-                good->amount += (role == 'S' ? 1 : -1);
+            // increase/decrease amount of good
+            good->amount += (role == 'S' ? 1 : -1);
 
-                printf("%s %s %s 1 unit. stock after = %d\n", cctime(), good->name, (role == 'S' ? "supplied" : "consumed"), good->amount);
+            printf("%s %s %s 1 unit. stock after = %d\n", cctime(), good->name, (role == 'S' ? "supplied" : "consumed"), good->amount);
 
-                // reset time to wait and attempt count
-                time_to_wait = interval;
-                i = 0;
-            }
-            else
-            {
-                printf("%s %s %s going to wait.\n", cctime(), good->name, (role == 'S' ? "supplier" : "consumer"));
-
-                // if attempt = repeat
-                if (i == repeat)
-                {
-                    // reset attempt count
-                    i = 0;
-                    // multiple time to wait by 2
-                    time_to_wait *= 2;
-                    // check if its exceed 60 sec
-                    if (time_to_wait >= 60)
-                        time_to_wait = 60;
-                }
-            }
-
-            // unlock thread
-            pthread_mutex_unlock(&good->mutex);
-
-            // wait
-            sleep(time_to_wait);
+            // reset time to wait and attempt count
+            time_to_wait = interval;
+            i = 0;
         }
+        else
+        {
+            printf("%s %s %s going to wait.\n", cctime(), good->name, (role == 'S' ? "supplier" : "consumer"));
+
+            // if attempt = repeat
+            if (i == repeat)
+            {
+                // reset attempt count
+                i = 0;
+                // multiple time to wait by 2
+                time_to_wait *= 2;
+                // check if its exceed 60 sec
+                if (time_to_wait >= 60)
+                    time_to_wait = 60;
+            }
+        }
+
+        // unlock thread
+        pthread_mutex_unlock(&good->mutex);
+
+        // wait
+        sleep(time_to_wait);
     }
 
     return NULL;
