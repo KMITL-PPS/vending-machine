@@ -189,23 +189,25 @@ void *entry(void *arg)
             else
             {
                 printf("%s %s %s going to wait.\n", cctime(), good->name, (role == 'S' ? "supplier" : "consumer"));
+
+                // if attempt = repeat
+                if (i == repeat)
+                {
+                    // reset attempt count
+                    i = 0;
+                    // multiple time to wait by 2
+                    time_to_wait *= 2;
+                    // check if its exceed 60 sec
+                    if (time_to_wait >= 60)
+                        time_to_wait = 60;
+                }
             }
 
             // unlock thread
             pthread_mutex_unlock(&good->mutex);
-        }
-        sleep(time_to_wait);
 
-        // if attempt = repeat
-        if (i == repeat)
-        {
-            // reset attempt count
-            i = 0;
-            // multiple time to wait by 2
-            time_to_wait *= 2;
-            // check if its exceed 60 sec
-            if (time_to_wait >= 60)
-                time_to_wait = 60;
+            // wait
+            sleep(time_to_wait);
         }
     }
 
