@@ -158,6 +158,13 @@ void *entry(void *arg)
     // read other information
     fscanf(fp, "%d\n%d", &interval, &repeat);
 
+    // check whether interval and repeat is <= zero or not
+    if (interval <= 0 || repeat <= 0)
+    {
+        fprintf(stderr, "Interval or repeat must greater than zero in file %s!", tmp_file);
+        exit(1);
+    }
+
     // attempt count
     int i;
     // time to wait (default is interval)
