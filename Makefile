@@ -3,7 +3,7 @@ OBJS = main.c
 CC = gcc
 
 calc: $(OBJS)
-	$(CC) main.c -ll -o main
+	$(CC) main.c -lpthread -o main
 
 clean:
 	rm main

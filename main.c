@@ -12,7 +12,7 @@
 #define MAX_AMOUNT 100
 
 // supplier amount
-#define SUPPLIER_AMOUNT 2
+#define SUPPLIER_AMOUNT 3
 
 // consumer amount
 #define CONSUMER_AMOUNT 2
